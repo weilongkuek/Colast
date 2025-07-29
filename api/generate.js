@@ -20,7 +20,7 @@ export default async function handler(req, res) {
 
   try {
     const chat = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-3.5-turbo",
       messages: [{ role: "user", content: fullPrompt }],
       temperature: 0.85,
       max_tokens: 500
