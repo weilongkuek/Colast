@@ -5,32 +5,24 @@ const openai = new OpenAI({
 });
 
 export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
   const { keywords, style } = req.body;
 
-  const prompt = `
-你是一名理发店文案助手，店名叫 CO HAIR SALOON。请根据以下信息生成一篇社交媒体发文内容。
-- 风格：${style}
-- 关键词：${keywords}
-请生成两个内容：
-1. 一个不超过10个字的中文标题，用于社交媒体吸引点击。
-2. 一段正文文案，带点夸张但真实，推荐理发师或服务，适合小红书风格。
-返回格式如下：
-标题：xxx
-正文：yyy
-`;
+  const prompt = `你是CO HAIR SALOON的顾客，请用「${style}」风格写一段推荐文案，重点围绕关键词「${keywords}」，内容可以自然带入赞美理发师的服务，描述店内环境舒适、手艺专业，推荐其他人来尝试。文案要简短、不要太官方，要像真人发文。可以适当加emoji。`;
 
-  const chat = await openai.chat.completions.create({
-    model: "gpt-4",
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.9,
-    max_tokens: 500
-  });
+  try {
+    const chat = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.8,
+      max_tokens: 300
+    });
 
-  const result = chat.choices[0].message.content;
-  const [titleLine, contentLine] = result.split("\n").filter(Boolean);
-
-  const title = titleLine.replace(/^标题：/, "").trim();
-  const content = contentLine.replace(/^正文：/, "").trim();
-
-  res.status(200).json({ title, content });
+    res.status(200).json({ result: chat.choices[0].message.content });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 }
