@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CO HAIR 文案生成器</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f6f6f6; }
+    h1 { color: #333; }
+    .container { background: white; padding: 20px; border-radius: 8px; max-width: 500px; margin: auto; }
+    button, select, input { margin-top: 10px; padding: 10px; width: 100%; }
+    .platforms img { width: 40px; margin: 10px; cursor: pointer; }
+    .output { white-space: pre-wrap; background: #eee; padding: 10px; border-radius: 6px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧠 CO HAIR 快速发文助手</h1>
+    <label>选择语言风格：</label>
+    <select id="style">
+      <option value="自然真诚">自然真诚</option>
+      <option value="轻夸张搞笑">轻夸张搞笑</option>
+      <option value="专业推荐">专业推荐</option>
+    </select>
+
+    <label>输入关键词（如理发师名字）：</label>
+    <input type="text" id="keywords" placeholder="例：yk 或 eilyn"/>
+
+    <button onclick="generate()">生成文案</button>
+
+    <div class="output" id="output"></div>
+
+    <div class="platforms">
+      <h3>点平台图标直接跳转发文：</h3>
+      <a id="fb" target="_blank"><img src="https://cdn-icons-png.flaticon.com/512/124/124010.png" /></a>
+      <a id="ig" target="_blank"><img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" /></a>
+      <a id="xhs" target="_blank"><img src="https://img.icons8.com/ios-filled/100/xiaohongshu.png" /></a>
+      <a id="tt" target="_blank"><img src="https://cdn-icons-png.flaticon.com/512/3046/3046120.png" /></a>
+    </div>
+  </div>
+
+  <script>
+    async function generate() {
+      const style = document.getElementById("style").value;
+      const keywords = document.getElementById("keywords").value;
+      const output = document.getElementById("output");
+      output.textContent = "⏳ 正在生成文案...";
+
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ style, keywords })
+      });
+
+      const data = await res.json();
+      if (data.result) {
+        output.textContent = data.result;
+
+        const encoded = encodeURIComponent(data.result);
+        document.getElementById("fb").href = `https://www.facebook.com/sharer/sharer.php?u=&quote=${encoded}`;
+        document.getElementById("ig").href = `https://www.instagram.com/`;  // IG 不支持预填文字，跳主页
+        document.getElementById("xhs").href = `https://www.xiaohongshu.com/`;  // 小红书暂不支持跳转填文案
+        document.getElementById("tt").href = `https://www.tiktok.com/upload?caption=${encoded}`;
+      } else {
+        output.textContent = "生成失败：" + (data.error || "未知错误");
+      }
+    }
+  </script>
+</body>
+</html>
