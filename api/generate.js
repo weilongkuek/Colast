@@ -9,37 +9,50 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { keywords, language } = req.body;
+  const { keywords, style, language } = req.body;
 
-  const prompt =
-    language === "zh"
-      ? `你是CO HAIR SALOON的顾客，请写一段发文推荐文案，内容要围绕关键词「${keywords}」，文风自然真实，可以带emoji，赞美理发师与环境，适合发到小红书。请同时生成一个不超过10字的吸睛标题。格式如下：
+  const zhPrompt = `你是CO HAIR SALOON的顾客，请用「${style}」风格写一段推荐文案，重点围绕关键词「${keywords}」，内容可以自然带入赞美理发师的服务，描述店内环境舒适、手艺专业，推荐其他人来尝试。文案要简短、不要太官方，要像真人发文。可以适当加emoji。
+  
+同时，请为该文案生成一个不超过10个字的标题，要求吸引人、真实、简短，可以带emoji。返回格式如下：
 
 标题：xxx
-文案：xxx`
-      : `You are a customer of CO HAIR SALOON. Write a short and natural post to recommend the salon based on the keyword "${keywords}". Mention great service, cozy environment, and praise the hairstylist naturally. Include emojis. Also generate a short, catchy title within 10 words. Format:
+文案：xxx`;
+
+  const enPrompt = `You are a happy customer of CO HAIR SALOON. Write a short and natural-looking social media post in a 「${style}」 style, focusing on the keywords: 「${keywords}」. Feel free to compliment the hairstylist's skill, describe the cozy environment, and recommend others to visit. Keep it casual, short, and authentic, with some emojis.
+
+Also, create a catchy and honest title for this post, no longer than 10 words. Return format:
 
 Title: xxx
-Post: xxx`;
+Content: xxx`;
+
+  const fullPrompt = language === "en" ? enPrompt : zhPrompt;
 
   try {
     const chat = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.85,
+      messages: [{ role: "user", content: fullPrompt }],
+      temperature: 0.9,
       max_tokens: 500
     });
 
     const reply = chat.choices[0].message.content;
 
-    const titleRegex = language === "zh" ? /标题[:：](.*)/ : /Title[:：](.*)/;
-    const bodyRegex = language === "zh" ? /文案[:：]([\s\S]*)/ : /Post[:：]([\s\S]*)/;
+    const titleMatch = reply.match(/标题[:：]|Title[:：]?\s*(.*)/i);
+    const contentMatch = reply.match(/文案[:：]|Content[:：]?\s*([\s\S]*)/i);
 
-    const title = reply.match(titleRegex)?.[1]?.trim() || "";
-    const result = reply.match(bodyRegex)?.[1]?.trim() || reply;
+    const title =
+      titleMatch && titleMatch.length >= 2
+        ? titleMatch[1].trim()
+        : reply.split("\n")[0].trim();
+
+    const result =
+      contentMatch && contentMatch.length >= 2
+        ? contentMatch[1].trim()
+        : reply.split("\n").slice(1).join("\n").trim();
 
     res.status(200).json({ title, result });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("API Error:", err);
+    res.status(500).json({ error: "文案生成失败，请稍后再试" });
   }
 }

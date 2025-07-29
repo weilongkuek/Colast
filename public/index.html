@@ -1,63 +1,78 @@
-import { useState } from "react";
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CO HAIR 文案生成器</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f6f6f6; }
+    h1 { color: #333; text-align: center; }
+    .container { background: white; padding: 20px; border-radius: 8px; max-width: 500px; margin: auto; }
+    button, select, input { margin-top: 10px; padding: 10px; width: 100%; }
+    .platforms img { width: 40px; margin: 10px; cursor: pointer; }
+    .output-title { font-weight: bold; font-size: 18px; margin-top: 20px; }
+    .output-body { white-space: pre-wrap; background: #eee; padding: 10px; border-radius: 6px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧠 CO HAIR 快速发文助手</h1>
+    
+    <label>选择语言：</label>
+    <select id="language">
+      <option value="zh">中文</option>
+      <option value="en">English</option>
+    </select>
 
-export default function Home() {
-  const [language, setLanguage] = useState("zh");
-  const [keywords, setKeywords] = useState("");
-  const [title, setTitle] = useState("");
-  const [result, setResult] = useState("");
-  const [loading, setLoading] = useState(false);
+    <label>输入关键词（如理发师名字）：</label>
+    <input type="text" id="keywords" placeholder="例：yk 或 eilyn"/>
 
-  async function generate() {
-    setLoading(true);
-    setTitle("⏳ 正在生成标题...");
-    setResult("⏳ 正在生成文案...");
+    <button onclick="generate()">生成文案</button>
 
-    const res = await fetch("/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keywords, language }),
-    });
+    <div class="output-title" id="title"></div>
+    <div class="output-body" id="output"></div>
 
-    const data = await res.json();
-    setLoading(false);
-
-    if (data.title && data.result) {
-      setTitle(data.title);
-      setResult(data.result);
-
-      const encoded = encodeURIComponent(`${data.title}\n${data.result}`);
-      document.getElementById("fb").href = `https://www.facebook.com/sharer/sharer.php?u=&quote=${encoded}`;
-      document.getElementById("tt").href = `https://www.tiktok.com/upload?caption=${encoded}`;
-    } else {
-      setTitle("生成失败");
-      setResult(data.error || "未知错误");
-    }
-  }
-
-  return (
-    <div style={{ padding: 20, maxWidth: 600, margin: "auto", fontFamily: "sans-serif" }}>
-      <h1>💇‍♀️ CO HAIR 文案助手</h1>
-      <label>选择语言：</label>
-      <select value={language} onChange={e => setLanguage(e.target.value)}>
-        <option value="zh">中文</option>
-        <option value="en">英文</option>
-      </select>
-
-      <label>输入关键词（如理发师名字）：</label>
-      <input type="text" value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="如：yk / eilyn" style={{ width: "100%", padding: 10, marginTop: 8 }} />
-
-      <button onClick={generate} disabled={loading} style={{ marginTop: 12, padding: 10, width: "100%" }}>
-        {loading ? "生成中..." : "生成文案"}
-      </button>
-
-      <h3 style={{ marginTop: 24 }}>{title}</h3>
-      <div style={{ whiteSpace: "pre-wrap", background: "#f4f4f4", padding: 10, borderRadius: 6 }}>{result}</div>
-
-      <h3>分享到社交平台：</h3>
-      <div style={{ display: "flex", gap: 16 }}>
-        <a id="fb" target="_blank"><img src="https://cdn-icons-png.flaticon.com/512/124/124010.png" width="40" /></a>
-        <a id="tt" target="_blank"><img src="https://static.vecteezy.com/system/resources/previews/016/716/485/large_2x/tiktok-icon-free-png.png" width="40" /></a>
-      </div>
+    <div class="platforms">
+      <h3>点平台图标直接跳转发文：</h3>
+      <a id="fb" target="_blank"><img src="https://cdn-icons-png.flaticon.com/512/124/124010.png" /></a>
+      <a id="ig" target="_blank"><img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" /></a>
+      <a id="xhs" target="_blank"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/XiaohongshuLOGO.png" /></a>
+      <a id="tt" target="_blank"><img src="https://static.vecteezy.com/system/resources/previews/016/716/485/large_2x/tiktok-icon-free-png.png" /></a>
     </div>
-  );
-}
+  </div>
+
+  <script>
+    async function generate() {
+      const language = document.getElementById("language").value;
+      const keywords = document.getElementById("keywords").value;
+      const titleEl = document.getElementById("title");
+      const outputEl = document.getElementById("output");
+
+      titleEl.textContent = "⏳ 正在生成标题...";
+      outputEl.textContent = "⏳ 正在生成正文文案...";
+
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ language, keywords })
+      });
+
+      const data = await res.json();
+
+      if (data.title && data.result) {
+        titleEl.textContent = data.title;
+        outputEl.textContent = data.result;
+
+        const encodedText = encodeURIComponent(`${data.title}\n${data.result}`);
+        document.getElementById("fb").href = `https://www.facebook.com/sharer/sharer.php?u=&quote=${encodedText}`;
+        document.getElementById("ig").href = `https://www.instagram.com/`;
+        document.getElementById("xhs").href = `https://www.xiaohongshu.com/`;
+        document.getElementById("tt").href = `https://www.tiktok.com/upload?caption=${encodedText}`;
+      } else {
+        titleEl.textContent = "生成失败";
+        outputEl.textContent = data.error || "未知错误";
+      }
+    }
+  </script>
+</body>
+</html>
