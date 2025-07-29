@@ -1,64 +1,51 @@
-import { OpenAI } from "openai";
+// pages/api/generate.ts
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+import type { NextApiRequest, NextApiResponse } from 'next';
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
-
-  const { keywords, style, language } = req.body;
-
-  if (!keywords || !style || !language) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
-
-  const zhPrompt = `
-你是CO HAIR SALOON的顾客，请用「${style}」风格写一段推荐文案，重点围绕关键词「${keywords}」，内容可以自然带入赞美理发师的服务，描述店内环境舒适、手艺专业，推荐其他人来尝试。文案要简短、不要太官方，要像真人发文。可以适当加emoji。
-
-同时，请为该文案生成一个不超过10个字的标题，要求吸引人、真实、简短，可以带emoji。
-返回格式如下：
-
-标题：xxx
-文案：xxx
-`.trim();
-
-  const enPrompt = `
-You are a happy customer of CO HAIR SALOON. Write a short and natural-looking social media post in a 「${style}」 style, focusing on the keywords: 「${keywords}」. Feel free to compliment the hairstylist's skill, describe the cozy environment, and recommend others to visit. Keep it casual, short, and authentic, with some emojis.
-
-Also, create a catchy and honest title for this post, no longer than 10 words.
-Return format:
-
-Title: xxx
-Content: xxx
-`.trim();
-
-  const prompt = language === "en" ? enPrompt : zhPrompt;
 
   try {
-    const chat = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.9,
-      max_tokens: 500
+    const prompt = req.body.prompt || '帮我写一句广告文案';
+    const apiKey = process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      return res.status(500).json({ error: 'Missing OpenAI API key in environment' });
+    }
+
+    const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-3.5-turbo', // 或 'gpt-4'，看你是否开通权限
+        messages: [
+          { role: 'system', content: '你是一个专业文案助手。' },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.7,
+      }),
     });
 
-    const reply = chat.choices[0]?.message?.content || "";
+    const contentType = openaiRes.headers.get('content-type');
+    const isJson = contentType && contentType.includes('application/json');
 
-    const titleRegex = language === "en" ? /Title[:：]?\s*(.+)/i : /标题[:：]?\s*(.+)/i;
-    const contentRegex = language === "en" ? /Content[:：]?\s*([\s\S]*)/i : /文案[:：]?\s*([\s\S]*)/i;
+    if (!openaiRes.ok) {
+      const errorText = isJson ? await openaiRes.json() : await openaiRes.text();
+      return res.status(openaiRes.status).json({
+        error: errorText,
+      });
+    }
 
-    const titleMatch = reply.match(titleRegex);
-    const contentMatch = reply.match(contentRegex);
+    const data = await openaiRes.json();
+    const message = data?.choices?.[0]?.message?.content ?? '生成失败';
 
-    const title = titleMatch?.[1]?.trim() || reply.split("\n")[0].trim();
-    const result = contentMatch?.[1]?.trim() || reply.split("\n").slice(1).join("\n").trim();
-
-    res.status(200).json({ title, result });
-  } catch (err) {
-    console.error("API Error:", err?.message || err);
-    res.status(500).json({ error: "文案生成失败，请稍后再试" });
+    return res.status(200).json({ result: message });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message || '服务器错误' });
   }
 }
