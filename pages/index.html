@@ -1,5 +1,5 @@
 // pages/index.js
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 export default function Home() {
   const [language, setLanguage] = useState('zh');
@@ -9,7 +9,7 @@ export default function Home() {
   const [output, setOutput] = useState('');
   const [error, setError] = useState('');
 
-  const generate = async () => {
+  const generate = useCallback(async () => {
     if (!keywords.trim()) {
       setError('❗请输入关键词');
       return;
@@ -44,37 +44,101 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [language, keywords]);
 
   const encoded = encodeURIComponent(`${title}\n${output}`);
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      generate();
+    }
+  };
+
   return (
-    <div style={{ fontFamily: 'sans-serif', padding: 20, background: '#f6f6f6', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 500, margin: 'auto', background: 'white', padding: 20, borderRadius: 8 }}>
+    <div style={{
+      fontFamily: 'sans-serif',
+      padding: 20,
+      background: '#f9f9f9',
+      minHeight: '100vh'
+    }}>
+      <div style={{
+        maxWidth: 500,
+        margin: 'auto',
+        background: 'white',
+        padding: 20,
+        borderRadius: 12,
+        boxShadow: '0 4px 10px rgba(0,0,0,0.05)'
+      }}>
         <h1 style={{ textAlign: 'center' }}>🧠 CO HAIR 快速发文助手</h1>
 
         <label>选择语言：</label>
-        <select value={language} onChange={e => setLanguage(e.target.value)}>
+        <select
+          value={language}
+          onChange={e => setLanguage(e.target.value)}
+          style={{ padding: 10, width: '100%', marginBottom: 10 }}
+        >
           <option value="zh">中文</option>
           <option value="en">English</option>
         </select>
 
-        <label style={{ marginTop: 10 }}>输入关键词（如理发师名字）：</label>
+        <label>输入关键词（如理发师名字）：</label>
         <input
           type="text"
           value={keywords}
           onChange={e => setKeywords(e.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder="例：yk 或 eilyn"
-          style={{ width: '100%', padding: 10, marginTop: 5 }}
+          style={{
+            width: '100%',
+            padding: 10,
+            marginTop: 5,
+            marginBottom: 10,
+            border: '1px solid #ccc',
+            borderRadius: 6
+          }}
         />
 
-        <button onClick={generate} style={{ width: '100%', padding: 10, marginTop: 10 }} disabled={loading}>
+        <button
+          onClick={generate}
+          disabled={loading}
+          style={{
+            width: '100%',
+            padding: 10,
+            backgroundColor: loading ? '#ccc' : '#4CAF50',
+            color: 'white',
+            border: 'none',
+            borderRadius: 6,
+            fontWeight: 'bold',
+            cursor: loading ? 'not-allowed' : 'pointer'
+          }}
+        >
           {loading ? '生成中...' : '生成文案'}
         </button>
 
-        {error && <div style={{ color: 'red', textAlign: 'center', marginTop: 20 }}>{error}</div>}
-        {title && <div style={{ fontWeight: 'bold', fontSize: 18, marginTop: 20 }}>{title}</div>}
-        {output && <div style={{ whiteSpace: 'pre-wrap', background: '#eee', padding: 10, borderRadius: 6, marginTop: 10 }}>{output}</div>}
+        {error && (
+          <div style={{ color: 'red', textAlign: 'center', marginTop: 20 }}>
+            {error}
+          </div>
+        )}
+
+        {title && (
+          <div style={{ fontWeight: 'bold', fontSize: 18, marginTop: 20 }}>
+            {title}
+          </div>
+        )}
+
+        {output && (
+          <div style={{
+            whiteSpace: 'pre-wrap',
+            background: '#f1f1f1',
+            padding: 12,
+            borderRadius: 6,
+            marginTop: 10,
+            lineHeight: 1.5
+          }}>
+            {output}
+          </div>
+        )}
 
         {output && (
           <div style={{ marginTop: 30 }}>
